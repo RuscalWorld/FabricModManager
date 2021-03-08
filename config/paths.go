@@ -1,9 +1,11 @@
 package config
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 )
 
@@ -13,6 +15,15 @@ func GetConfigPath(filename string) string {
 		log.Fatalln(err)
 	}
 	return path.Join(dir, ".fmm", filename)
+}
+
+func IsMinecraftDirectory(path string) bool {
+	modsPath := filepath.Join(path, "mods")
+	_, err := ioutil.ReadDir(modsPath)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func GetMinecraftDirectory() string {
