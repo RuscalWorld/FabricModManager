@@ -5,12 +5,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/hashicorp/go-version"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/hashicorp/go-version"
 )
 
 type FabricMod struct {
@@ -31,10 +32,6 @@ type FabricMod struct {
 type NestedJAR struct {
 	File string `json:"file"`
 }
-
-//func (m FabricMod) IsBreaksWith(mod *FabricMod) bool {
-//
-//}
 
 func CheckVersions(ver string, constraint interface{}) bool {
 	if versions, ok := constraint.([]interface{}); ok {
@@ -155,22 +152,39 @@ func ReadModInfo(input []byte) (*FabricMod, error) {
 	}
 }
 
-func GetMods(dirname string) (*[]FabricMod, error) {
-	files, err := ioutil.ReadDir(dirname)
+func GetMods(dirname string, recursive bool) (*[]FabricMod, error) {
+	paths := make([]string, 0)
+	var err error
+
+	if recursive {
+		err = filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if strings.HasSuffix(path, ".jar") {
+				paths = append(paths, path)
+			}
+
+			return nil
+		})
+	} else {
+		files, err := ioutil.ReadDir(dirname)
+		if err == nil {
+			for _, file := range files {
+				paths = append(paths, path.Join(dirname, file.Name()))
+			}
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
 	mods := make([]FabricMod, 0)
-	for _, file := range files {
-		modsPath, err := filepath.Abs("mods/" + file.Name())
+	for _, modPath := range paths {
+		mod, err := GetModInfo(modPath)
 		if err != nil {
-			continue
-		}
-
-		mod, err := GetModInfo(modsPath)
-		if err != nil {
-			fmt.Println("Unable to read", file.Name()+":", err)
 			continue
 		}
 
@@ -183,9 +197,16 @@ func GetMods(dirname string) (*[]FabricMod, error) {
 func GetFullModMap(mods *[]FabricMod) (map[string]FabricMod, error) {
 	if mods == nil {
 		var err error
-		mods, err = GetMods(path.Join(WorkDir, "mods"))
+		mods, err = GetMods(path.Join(WorkDir, "mods"), false)
 		if err != nil {
 			return nil, err
+		}
+
+		libraries, err := GetMods(path.Join(WorkDir, "libraries"), true)
+		if err == nil {
+			for _, library := range *libraries {
+				*mods = append(*mods, library)
+			}
 		}
 	}
 

@@ -26,7 +26,7 @@ func main() {
 				Aliases:     []string{"l"},
 				Description: "Shows info about installed mods",
 				Action: func(context *cli.Context) error {
-					mods, err := GetMods(path.Join(WorkDir, "mods"))
+					mods, err := GetMods(path.Join(WorkDir, "mods"), false)
 					if err != nil {
 						return err
 					}
@@ -48,8 +48,6 @@ func main() {
 						return err
 					}
 
-					modMap["minecraft"] = FabricMod{}
-					modMap["fabricloader"] = FabricMod{}
 					errors, warnings := 0, 0
 
 					for _, mod := range modMap {
@@ -77,6 +75,9 @@ func main() {
 						for id, dependVer := range mod.Depends {
 							if value, ok := modMap[id]; !ok || !CheckVersions(value.Version, dependVer) {
 								fmt.Println("!!!", id, dependVer, "is required for", mod.Name)
+								if ok {
+									fmt.Println(value.Version, "is installed, version", dependVer, "is required")
+								}
 								errors++
 							}
 						}
