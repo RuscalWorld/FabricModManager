@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-version"
 	"io/ioutil"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 type FabricMod struct {
@@ -28,6 +30,42 @@ type FabricMod struct {
 
 type NestedJAR struct {
 	File string `json:"file"`
+}
+
+//func (m FabricMod) IsBreaksWith(mod *FabricMod) bool {
+//
+//}
+
+func CheckVersions(ver string, constraint interface{}) bool {
+	if versions, ok := constraint.([]interface{}); ok {
+		for _, required := range versions {
+			if required == ver {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	required := constraint.(string)
+	if required == "*" {
+		return true
+	}
+
+	ver = strings.TrimPrefix(ver, "v")
+	required = strings.TrimPrefix(required, "v")
+
+	vConstraint, err := version.NewConstraint(required)
+	if err != nil {
+		return false
+	}
+
+	vVer, err := version.NewVersion(ver)
+	if err != nil {
+		return false
+	}
+
+	return vConstraint.Check(vVer)
 }
 
 func GetModInfo(path string) (*FabricMod, error) {

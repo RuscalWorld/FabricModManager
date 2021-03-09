@@ -53,30 +53,30 @@ func main() {
 					errors, warnings := 0, 0
 
 					for _, mod := range modMap {
-						for id := range mod.Breaks {
-							if value, ok := modMap[id]; ok {
+						for id, breakVer := range mod.Breaks {
+							if value, ok := modMap[id]; ok && CheckVersions(value.Version, breakVer) {
 								fmt.Println("!!!", value.Name, "is incompatible with", mod.Name)
 								errors++
 							}
 						}
 
-						for id := range mod.Conflicts {
-							if value, ok := modMap[id]; ok {
+						for id, conflictVer := range mod.Conflicts {
+							if value, ok := modMap[id]; ok && CheckVersions(value.Version, conflictVer) {
 								fmt.Println(value.Name, "is conflicting with", mod.Name)
 								warnings++
 							}
 						}
 
-						for id, version := range mod.Recommends {
-							if _, ok := modMap[id]; !ok {
-								fmt.Println(id, version, "is recommended to be installed with", mod.Name)
+						for id, recommendedVer := range mod.Recommends {
+							if value, ok := modMap[id]; !ok || !CheckVersions(value.Version, recommendedVer) {
+								fmt.Println(id, recommendedVer, "is recommended to be installed with", mod.Name)
 								warnings++
 							}
 						}
 
-						for id, version := range mod.Depends {
-							if _, ok := modMap[id]; !ok {
-								fmt.Println("!!!", id, version, "is required for", mod.Name)
+						for id, dependVer := range mod.Depends {
+							if value, ok := modMap[id]; !ok || !CheckVersions(value.Version, dependVer) {
+								fmt.Println("!!!", id, dependVer, "is required for", mod.Name)
 								errors++
 							}
 						}
