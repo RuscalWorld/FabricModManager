@@ -36,6 +36,66 @@ type NestedJAR struct {
 	File string `json:"file"`
 }
 
+func (m FabricMod) GetBreaks(mods *[]FabricMod) *[]FabricMod {
+	breaks := make([]FabricMod, 0)
+	for id, breakVer := range m.Breaks {
+		if dep, exact := m.ResolveDependency(id, breakVer, mods); dep != nil && exact {
+			breaks = append(breaks, *dep)
+		}
+	}
+	return &breaks
+}
+
+func (m FabricMod) GetConflicts(mods *[]FabricMod) *[]FabricMod {
+	conflicts := make([]FabricMod, 0)
+	for id, conflictVer := range m.Conflicts {
+		if dep, exact := m.ResolveDependency(id, conflictVer, mods); dep != nil && exact {
+			conflicts = append(conflicts, *dep)
+		}
+	}
+	return &conflicts
+}
+
+func (m FabricMod) GetInstalledRecommends(mods *[]FabricMod) *[]FabricMod {
+	recommends := make([]FabricMod, 0)
+	for id, recommendedVer := range m.Recommends {
+		if dep, exact := m.ResolveDependency(id, recommendedVer, mods); dep != nil && exact {
+			recommends = append(recommends, *dep)
+		}
+	}
+	return &recommends
+}
+
+func (m FabricMod) GetMissingRecommends(mods *[]FabricMod) *map[string]interface{} {
+	recommends := make(map[string]interface{}, 0)
+	for id, recommendedVer := range m.Recommends {
+		if dep, exact := m.ResolveDependency(id, recommendedVer, mods); dep == nil || !exact {
+			recommends[id] = recommendedVer
+		}
+	}
+	return &recommends
+}
+
+func (m FabricMod) GetInstalledDependencies(mods *[]FabricMod) *[]FabricMod {
+	depends := make([]FabricMod, 0)
+	for id, dependVer := range m.Depends {
+		if dep, exact := m.ResolveDependency(id, dependVer, mods); dep != nil && exact {
+			depends = append(depends, *dep)
+		}
+	}
+	return &depends
+}
+
+func (m FabricMod) GetMissingDependencies(mods *[]FabricMod) *map[string]interface{} {
+	depends := make(map[string]interface{}, 0)
+	for id, dependVer := range m.Depends {
+		if dep, exact := m.ResolveDependency(id, dependVer, mods); dep == nil || !exact {
+			depends[id] = dependVer
+		}
+	}
+	return &depends
+}
+
 func (m *FabricMod) ResolveNestedDependency(id string) *FabricMod {
 	if m.ID == id {
 		return m

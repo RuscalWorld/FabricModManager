@@ -1,8 +1,9 @@
 package core
 
 import (
-	"github.com/hashicorp/go-version"
 	"strings"
+
+	"github.com/hashicorp/go-version"
 )
 
 func CheckVersions(ver string, constraint interface{}) bool {

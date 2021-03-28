@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-
 	"github.com/RuscalWorld/FabricModManager/core"
 	"github.com/RuscalWorld/FabricModManager/log"
 	"github.com/urfave/cli/v2"
@@ -18,42 +17,34 @@ func CheckMods(_ *cli.Context) error {
 	errors, warnings := 0, 0
 
 	for _, mod := range *mods {
-		for id, breakVer := range mod.Breaks {
-			if dep, exact := mod.ResolveDependency(id, breakVer, mods); dep != nil && exact {
-				log.Error(log.Danger(dep.Name), "is incompatible with", log.Highlight(mod.Name))
-				errors++
+		for _, breaking := range *mod.GetBreaks(mods) {
+			log.Error(log.Danger(breaking.Name), "is incompatible with", log.Highlight(mod.Name))
+			errors++
+		}
+
+		for _, conflict := range *mod.GetConflicts(mods) {
+			log.Warn(log.Warning(conflict.Name), "is conflicting with", log.Highlight(mod.Name))
+			warnings++
+		}
+
+		for id, version := range *mod.GetMissingRecommends(mods) {
+			if recommend, _ := mod.ResolveDependency(id, version, mods); recommend != nil {
+				log.Info(fmt.Sprintf("%s %s is recommended to be installed with %s, but currently installed version (%s) doesn't satisfy this recommendation",
+					log.Highlight(id), log.Good(version), log.Highlight(mod.Name), log.Warning(recommend.Version)))
+			} else {
+				log.Info(log.Warning(id), log.Warning(version), "is recommended to be installed with", log.Highlight(mod.Name))
 			}
 		}
 
-		for id, conflictVer := range mod.Conflicts {
-			if dep, exact := mod.ResolveDependency(id, conflictVer, mods); dep != nil && exact {
-				log.Warn(log.Warning(dep.Name), "is conflicting with", log.Highlight(mod.Name))
-				warnings++
+		for id, version := range *mod.GetMissingDependencies(mods) {
+			if dependency, _ := mod.ResolveDependency(id, version, mods); dependency != nil {
+				log.Error(fmt.Sprintf("%s %s must be installed with %s, but currently installed version (%s) doesn't satisfy this requirement",
+					log.Highlight(id), log.Warning(version), log.Highlight(mod.Name), log.Danger(dependency.Version)))
+			} else {
+				log.Error(log.Danger(id), log.Danger(version), "must be installed with", log.Highlight(mod.Name))
 			}
-		}
 
-		for id, recommendedVer := range mod.Recommends {
-			if dep, exact := mod.ResolveDependency(id, recommendedVer, mods); !exact {
-				if dep != nil {
-					log.Info(fmt.Sprintf("%s %s is recommended to be installed with %s, but currently installed version (%s) doesn't satisfy this recommendation",
-						log.Highlight(id), log.Good(recommendedVer), log.Highlight(mod.Name), log.Warning(dep.Version)))
-				} else {
-					log.Info(log.Warning(id), log.Warning(recommendedVer), "is recommended to be installed with", log.Highlight(mod.Name))
-				}
-			}
-		}
-
-		for id, dependVer := range mod.Depends {
-			if dep, exact := mod.ResolveDependency(id, dependVer, mods); !exact {
-				if dep != nil {
-					log.Error(fmt.Sprintf("%s %s is required to be installed with %s, but currently installed version (%s) doesn't satisfy this requirement",
-						log.Highlight(id), log.Warning(dependVer), log.Highlight(mod.Name), log.Danger(dep.Version)))
-				} else {
-					log.Error(log.Danger(id), log.Danger(dependVer), "must be installed with", log.Highlight(mod.Name))
-				}
-
-				errors++
-			}
+			errors++
 		}
 	}
 
