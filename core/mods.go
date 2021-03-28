@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"archive/zip"
@@ -265,32 +265,4 @@ func GetAllMods() (*[]FabricMod, error) {
 	}
 
 	return mods, nil
-}
-
-func GetFullModMap(mods *[]FabricMod) (map[string]FabricMod, error) {
-	if mods == nil {
-		var err error
-		mods, err = GetAllMods()
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	modMap := make(map[string]FabricMod)
-	for _, mod := range *mods {
-		modMap[mod.ID] = mod
-		if len(mod.Nested) > 0 {
-			nestedModMap, err := GetFullModMap(&mod.Nested)
-			if err != nil {
-				continue
-			}
-
-			for id, nestedMod := range nestedModMap {
-				modMap[id] = nestedMod
-			}
-		}
-	}
-
-	return modMap, nil
 }
