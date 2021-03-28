@@ -11,8 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
-	"github.com/hashicorp/go-version"
 )
 
 type FabricMod struct {
@@ -85,47 +83,6 @@ func (m FabricMod) ResolveDependency(id string, version interface{}, mods *[]Fab
 	}
 
 	return best, false
-}
-
-func GetMinecraftDependency() *FabricMod {
-	return &FabricMod{
-		FabricModInfo: FabricModInfo{
-			ID:      "minecraft",
-			Version: config.Global.MinecraftVersion,
-		},
-	}
-}
-
-func CheckVersions(ver string, constraint interface{}) bool {
-	if versions, ok := constraint.([]interface{}); ok {
-		for _, required := range versions {
-			if required == ver {
-				return true
-			}
-		}
-
-		return false
-	}
-
-	required := constraint.(string)
-	if required == "*" {
-		return true
-	}
-
-	ver = strings.TrimPrefix(ver, "v")
-	required = strings.TrimPrefix(required, "v")
-
-	vConstraint, err := version.NewConstraint(required)
-	if err != nil {
-		return false
-	}
-
-	vVer, err := version.NewVersion(ver)
-	if err != nil {
-		return false
-	}
-
-	return vConstraint.Check(vVer)
 }
 
 func GetModInfo(path string) (*FabricMod, error) {
