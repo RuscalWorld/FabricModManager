@@ -16,6 +16,11 @@ import (
 )
 
 type FabricMod struct {
+	FabricModInfo
+	Nested []FabricMod
+}
+
+type FabricModInfo struct {
 	ID          string                 `json:"id"`
 	Version     string                 `json:"version"`
 	Environment string                 `json:"environment"`
@@ -27,7 +32,6 @@ type FabricMod struct {
 	JARs        *[]NestedJAR           `json:"jars"`
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
-	Nested      []FabricMod
 }
 
 type NestedJAR struct {
@@ -85,8 +89,10 @@ func (m FabricMod) ResolveDependency(id string, version interface{}, mods *[]Fab
 
 func GetMinecraftDependency() *FabricMod {
 	return &FabricMod{
-		ID:      "minecraft",
-		Version: config.Global.MinecraftVersion,
+		FabricModInfo: FabricModInfo{
+			ID:      "minecraft",
+			Version: config.Global.MinecraftVersion,
+		},
 	}
 }
 
