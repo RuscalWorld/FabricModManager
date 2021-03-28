@@ -1,12 +1,12 @@
 package commands
 
 import (
-	"fmt"
-	"path"
-
 	"github.com/RuscalWorld/FabricModManager/config"
 	"github.com/RuscalWorld/FabricModManager/core"
+	"github.com/RuscalWorld/FabricModManager/log"
 	"github.com/urfave/cli/v2"
+	"path"
+	"strings"
 )
 
 func ListMods(_ *cli.Context) error {
@@ -15,9 +15,26 @@ func ListMods(_ *cli.Context) error {
 		return err
 	}
 
-	for i, mod := range *mods {
-		fmt.Println(i+1, "|", mod.Name, "|", mod.Description, "|", len(mod.Nested), "nested mods")
+	log.Info("Mod list")
+	for _, mod := range *mods {
+		PrintModInfo(mod, 0, false)
 	}
 
 	return nil
+}
+
+func PrintModInfo(mod core.FabricMod, depth int, last bool) {
+	output := strings.Repeat(" ║", depth)
+
+	if last {
+		output += " ╚ "
+	} else {
+		output += " ╠ "
+	}
+
+	output += mod.GetName() + " " + log.Highlight(mod.Version)
+	log.Info(output)
+	for i, nested := range mod.Nested {
+		PrintModInfo(nested, depth+1, i == len(mod.Nested)-1)
+	}
 }

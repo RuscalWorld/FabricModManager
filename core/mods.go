@@ -36,6 +36,13 @@ type NestedJAR struct {
 	File string `json:"file"`
 }
 
+func (m FabricMod) GetName() string {
+	if len(m.Name) > 0 {
+		return m.Name
+	}
+	return m.ID
+}
+
 func (m FabricMod) GetBreaks(mods *[]FabricMod) *[]FabricMod {
 	breaks := make([]FabricMod, 0)
 	for id, breakVer := range m.Breaks {
