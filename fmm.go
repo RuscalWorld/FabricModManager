@@ -9,24 +9,34 @@ import (
 	"path"
 )
 
-var WorkDir string
-
 func main() {
 	dir, err := os.Getwd()
 	if err != nil || !config.IsMinecraftDirectory(dir) {
-		WorkDir = config.GetMinecraftDirectory()
+		config.Global.WorkDir = config.GetMinecraftDirectory()
 	} else {
-		WorkDir = dir
+		config.Global.WorkDir = dir
 	}
 
 	app := &cli.App{
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:        "check-mc",
+				Usage:       "Should FMM check your Minecraft version?",
+				Destination: &config.Global.CheckMinecraft,
+			},
+			&cli.StringFlag{
+				Name:        "mc-version",
+				Usage:       "Explicitly specify Minecraft version",
+				Destination: &config.Global.MinecraftVersion,
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name:        "list",
 				Aliases:     []string{"l"},
 				Description: "Shows info about installed mods",
 				Action: func(context *cli.Context) error {
-					mods, err := GetMods(path.Join(WorkDir, "mods"), false)
+					mods, err := GetMods(path.Join(config.Global.WorkDir, "mods"), false)
 					if err != nil {
 						return err
 					}
@@ -43,6 +53,22 @@ func main() {
 				Aliases:     []string{"c"},
 				Description: "Checks your mod list for conflicts and unmet dependencies",
 				Action: func(context *cli.Context) error {
+					if config.Global.CheckMinecraft {
+						if config.Global.MinecraftVersion == "" {
+							config.Global.MinecraftVersion, err = GetCurrentMinecraftVersion()
+
+							if err != nil {
+								fmt.Println("Unable to determine current Minecraft version:", err)
+								fmt.Println("It looks like you are either using non-official launcher or have no Fabric installed")
+								fmt.Println("You can provide Minecraft version explicitly using --mc-version flag")
+							}
+						}
+					}
+
+					if config.Global.MinecraftVersion != "" && config.Global.CheckMinecraft {
+						fmt.Println("Assuming that you're using Minecraft", config.Global.MinecraftVersion)
+					}
+
 					mods, err := GetAllMods()
 					if err != nil {
 						return err
@@ -80,7 +106,7 @@ func main() {
 						for id, dependVer := range mod.Depends {
 							if dep, exact := mod.ResolveDependency(id, dependVer, mods); !exact {
 								if dep != nil {
-									fmt.Println(fmt.Sprintf("!!! %s %s is required to be installed with %s, but currently installed version (%s) doesn't satisfy this requirement %t", id, dependVer, mod.Name, dep.Version, exact))
+									fmt.Println(fmt.Sprintf("!!! %s %s is required to be installed with %s, but currently installed version (%s) doesn't satisfy this requirement", id, dependVer, mod.Name, dep.Version))
 								} else {
 									fmt.Println(id, dependVer, "must be installed with", mod.Name)
 								}

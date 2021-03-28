@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/RuscalWorld/FabricModManager/config"
 	"io/ioutil"
 	"os"
 	"path"
@@ -53,6 +54,11 @@ func (m *FabricMod) ResolveNestedDependency(id string) *FabricMod {
 }
 
 func (m FabricMod) ResolveDependency(id string, version interface{}, mods *[]FabricMod) (*FabricMod, bool) {
+	if id == "minecraft" {
+		minecraft := GetMinecraftDependency()
+		return minecraft, CheckVersions(minecraft.Version, version) || !config.Global.CheckMinecraft
+	}
+
 	if mod := m.ResolveNestedDependency(id); mod != nil {
 		return mod, true
 	}
@@ -75,6 +81,13 @@ func (m FabricMod) ResolveDependency(id string, version interface{}, mods *[]Fab
 	}
 
 	return best, false
+}
+
+func GetMinecraftDependency() *FabricMod {
+	return &FabricMod{
+		ID:      "minecraft",
+		Version: config.Global.MinecraftVersion,
+	}
 }
 
 func CheckVersions(ver string, constraint interface{}) bool {
@@ -239,12 +252,12 @@ func GetMods(dirname string, recursive bool) (*[]FabricMod, error) {
 }
 
 func GetAllMods() (*[]FabricMod, error) {
-	mods, err := GetMods(path.Join(WorkDir, "mods"), false)
+	mods, err := GetMods(path.Join(config.Global.WorkDir, "mods"), false)
 	if err != nil {
 		return nil, err
 	}
 
-	libraries, err := GetMods(path.Join(WorkDir, "libraries"), true)
+	libraries, err := GetMods(path.Join(config.Global.WorkDir, "libraries"), true)
 	if err == nil {
 		for _, library := range *libraries {
 			*mods = append(*mods, library)
