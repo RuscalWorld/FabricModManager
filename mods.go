@@ -33,6 +33,50 @@ type NestedJAR struct {
 	File string `json:"file"`
 }
 
+func (m *FabricMod) ResolveNestedDependency(id string) *FabricMod {
+	if m.ID == id {
+		return m
+	}
+
+	for _, mod := range m.Nested {
+		if mod.ID == id {
+			return &mod
+		}
+
+		dependency := mod.ResolveNestedDependency(id)
+		if dependency != nil {
+			return dependency
+		}
+	}
+
+	return nil
+}
+
+func (m FabricMod) ResolveDependency(id string, version interface{}, mods *[]FabricMod) (*FabricMod, bool) {
+	if mod := m.ResolveNestedDependency(id); mod != nil {
+		return mod, true
+	}
+
+	if mods == nil {
+		return nil, false
+	}
+
+	var best *FabricMod
+	for _, mod := range *mods {
+		dependency := mod.ResolveNestedDependency(id)
+		if dependency != nil {
+			satisfy := CheckVersions(dependency.Version, version)
+			if satisfy {
+				return dependency, true
+			}
+
+			best = dependency
+		}
+	}
+
+	return best, false
+}
+
 func CheckVersions(ver string, constraint interface{}) bool {
 	if versions, ok := constraint.([]interface{}); ok {
 		for _, required := range versions {
@@ -194,19 +238,29 @@ func GetMods(dirname string, recursive bool) (*[]FabricMod, error) {
 	return &mods, nil
 }
 
+func GetAllMods() (*[]FabricMod, error) {
+	mods, err := GetMods(path.Join(WorkDir, "mods"), false)
+	if err != nil {
+		return nil, err
+	}
+
+	libraries, err := GetMods(path.Join(WorkDir, "libraries"), true)
+	if err == nil {
+		for _, library := range *libraries {
+			*mods = append(*mods, library)
+		}
+	}
+
+	return mods, nil
+}
+
 func GetFullModMap(mods *[]FabricMod) (map[string]FabricMod, error) {
 	if mods == nil {
 		var err error
-		mods, err = GetMods(path.Join(WorkDir, "mods"), false)
+		mods, err = GetAllMods()
+
 		if err != nil {
 			return nil, err
-		}
-
-		libraries, err := GetMods(path.Join(WorkDir, "libraries"), true)
-		if err == nil {
-			for _, library := range *libraries {
-				*mods = append(*mods, library)
-			}
 		}
 	}
 

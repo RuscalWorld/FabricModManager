@@ -43,41 +43,48 @@ func main() {
 				Aliases:     []string{"c"},
 				Description: "Checks your mod list for conflicts and unmet dependencies",
 				Action: func(context *cli.Context) error {
-					modMap, err := GetFullModMap(nil)
+					mods, err := GetAllMods()
 					if err != nil {
 						return err
 					}
 
 					errors, warnings := 0, 0
 
-					for _, mod := range modMap {
+					for _, mod := range *mods {
 						for id, breakVer := range mod.Breaks {
-							if value, ok := modMap[id]; ok && CheckVersions(value.Version, breakVer) {
-								fmt.Println("!!!", value.Name, "is incompatible with", mod.Name)
+							if dep, exact := mod.ResolveDependency(id, breakVer, mods); dep != nil && exact {
+								fmt.Println("!!!", dep.Name, "is incompatible with", mod.Name)
 								errors++
 							}
 						}
 
 						for id, conflictVer := range mod.Conflicts {
-							if value, ok := modMap[id]; ok && CheckVersions(value.Version, conflictVer) {
-								fmt.Println(value.Name, "is conflicting with", mod.Name)
+							if dep, exact := mod.ResolveDependency(id, conflictVer, mods); dep != nil && exact {
+								fmt.Println(dep.Name, "is conflicting with", mod.Name)
 								warnings++
 							}
 						}
 
 						for id, recommendedVer := range mod.Recommends {
-							if value, ok := modMap[id]; !ok || !CheckVersions(value.Version, recommendedVer) {
-								fmt.Println(id, recommendedVer, "is recommended to be installed with", mod.Name)
+							if dep, exact := mod.ResolveDependency(id, recommendedVer, mods); !exact {
+								if dep != nil {
+									fmt.Println(fmt.Sprintf("%s %s is recommended to be installed with %s, but currently installed version (%s) doesn't satisfy this recommendation", id, recommendedVer, mod.Name, dep.Version))
+								} else {
+									fmt.Println(id, recommendedVer, "is recommended to be installed with", mod.Name)
+								}
+
 								warnings++
 							}
 						}
 
 						for id, dependVer := range mod.Depends {
-							if value, ok := modMap[id]; !ok || !CheckVersions(value.Version, dependVer) {
-								fmt.Println("!!!", id, dependVer, "is required for", mod.Name)
-								if ok {
-									fmt.Println(value.Version, "is installed, version", dependVer, "is required")
+							if dep, exact := mod.ResolveDependency(id, dependVer, mods); !exact {
+								if dep != nil {
+									fmt.Println(fmt.Sprintf("!!! %s %s is required to be installed with %s, but currently installed version (%s) doesn't satisfy this requirement %t", id, dependVer, mod.Name, dep.Version, exact))
+								} else {
+									fmt.Println(id, dependVer, "must be installed with", mod.Name)
 								}
+
 								errors++
 							}
 						}
