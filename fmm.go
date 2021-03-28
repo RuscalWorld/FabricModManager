@@ -2,14 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/RuscalWorld/FabricModManager/config"
-	"github.com/urfave/cli/v2"
-	"log"
 	"os"
 	"path"
+
+	"github.com/RuscalWorld/FabricModManager/config"
+	"github.com/RuscalWorld/FabricModManager/log"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
+	log.SetupLogging()
+
 	dir, err := os.Getwd()
 	if err != nil || !config.IsMinecraftDirectory(dir) {
 		config.Global.WorkDir = config.GetMinecraftDirectory()
@@ -58,15 +61,15 @@ func main() {
 							config.Global.MinecraftVersion, err = GetCurrentMinecraftVersion()
 
 							if err != nil {
-								fmt.Println("Unable to determine current Minecraft version:", err)
-								fmt.Println("It looks like you are either using non-official launcher or have no Fabric installed")
-								fmt.Println("You can provide Minecraft version explicitly using --mc-version flag")
+								log.Warn("Unable to determine current Minecraft version:", err)
+								log.Warn("It looks like you are either using non-official launcher or have no Fabric installed")
+								log.Warn("You can provide Minecraft version explicitly using --mc-version flag")
 							}
 						}
 					}
 
 					if config.Global.MinecraftVersion != "" && config.Global.CheckMinecraft {
-						fmt.Println("Assuming that you're using Minecraft", config.Global.MinecraftVersion)
+						log.Info("Assuming that you're using Minecraft", config.Global.MinecraftVersion)
 					}
 
 					mods, err := GetAllMods()
@@ -79,14 +82,14 @@ func main() {
 					for _, mod := range *mods {
 						for id, breakVer := range mod.Breaks {
 							if dep, exact := mod.ResolveDependency(id, breakVer, mods); dep != nil && exact {
-								fmt.Println("!!!", dep.Name, "is incompatible with", mod.Name)
+								log.Error(log.Danger(dep.Name), "is incompatible with", log.Highlight(mod.Name))
 								errors++
 							}
 						}
 
 						for id, conflictVer := range mod.Conflicts {
 							if dep, exact := mod.ResolveDependency(id, conflictVer, mods); dep != nil && exact {
-								fmt.Println(dep.Name, "is conflicting with", mod.Name)
+								log.Warn(log.Warning(dep.Name), "is conflicting with", log.Highlight(mod.Name))
 								warnings++
 							}
 						}
@@ -94,9 +97,10 @@ func main() {
 						for id, recommendedVer := range mod.Recommends {
 							if dep, exact := mod.ResolveDependency(id, recommendedVer, mods); !exact {
 								if dep != nil {
-									fmt.Println(fmt.Sprintf("%s %s is recommended to be installed with %s, but currently installed version (%s) doesn't satisfy this recommendation", id, recommendedVer, mod.Name, dep.Version))
+									log.Info(fmt.Sprintf("%s %s is recommended to be installed with %s, but currently installed version (%s) doesn't satisfy this recommendation",
+										log.Highlight(id), log.Good(recommendedVer), log.Highlight(mod.Name), log.Warning(dep.Version)))
 								} else {
-									fmt.Println(id, recommendedVer, "is recommended to be installed with", mod.Name)
+									log.Info(log.Warning(id), log.Warning(recommendedVer), "is recommended to be installed with", log.Highlight(mod.Name))
 								}
 
 								warnings++
@@ -106,9 +110,10 @@ func main() {
 						for id, dependVer := range mod.Depends {
 							if dep, exact := mod.ResolveDependency(id, dependVer, mods); !exact {
 								if dep != nil {
-									fmt.Println(fmt.Sprintf("!!! %s %s is required to be installed with %s, but currently installed version (%s) doesn't satisfy this requirement", id, dependVer, mod.Name, dep.Version))
+									log.Error(fmt.Sprintf("%s %s is required to be installed with %s, but currently installed version (%s) doesn't satisfy this requirement",
+										log.Highlight(id), log.Warning(dependVer), log.Highlight(mod.Name), log.Danger(dep.Version)))
 								} else {
-									fmt.Println(id, dependVer, "must be installed with", mod.Name)
+									log.Error(log.Danger(id), log.Danger(dependVer), "must be installed with", log.Highlight(mod.Name))
 								}
 
 								errors++
@@ -116,7 +121,7 @@ func main() {
 						}
 					}
 
-					fmt.Println(errors, "errors and", warnings, "warnings found while checking your mod list")
+					log.Info(errors, log.Danger("errors"), "and", warnings, log.Warning("warnings"), "found while checking your mod list")
 					return nil
 				},
 			},
@@ -125,6 +130,6 @@ func main() {
 
 	err = app.Run(os.Args)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
 }
