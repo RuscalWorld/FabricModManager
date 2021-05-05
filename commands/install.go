@@ -2,11 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"github.com/RuscalWorld/FabricModManager/config"
-	"github.com/RuscalWorld/FabricModManager/core"
-	"github.com/RuscalWorld/FabricModManager/log"
-	"github.com/RuscalWorld/FabricModManager/remote"
-	"github.com/urfave/cli/v2"
 	"io"
 	"net/http"
 	"os"
@@ -14,18 +9,29 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/RuscalWorld/FabricModManager/config"
+	"github.com/RuscalWorld/FabricModManager/core"
+	"github.com/RuscalWorld/FabricModManager/log"
+	"github.com/RuscalWorld/FabricModManager/remote"
+	"github.com/urfave/cli/v2"
 )
 
 func InstallMod(ctx *cli.Context) error {
-	name := ctx.Args().Get(0)
-	log.Info(fmt.Sprintf("Searching mod %s", log.Highlight(name)))
-
 	mods, err := core.GetAllMods()
 	if err != nil {
 		return fmt.Errorf("unable to retrieve list of installed mods: %s", err)
 	}
 
-	return DownloadMod(name, *mods)
+	for _, name := range ctx.Args().Slice() {
+		log.Info(fmt.Sprintf("Searching mod %s", log.Highlight(name)))
+		err = DownloadMod(name, *mods)
+		if err != nil {
+			return fmt.Errorf("unable to install mod %s: %s", name, err)
+		}
+	}
+
+	return nil
 }
 
 func DownloadMod(name string, mods []core.FabricMod) error {
@@ -114,11 +120,10 @@ func DownloadMod(name string, mods []core.FabricMod) error {
 			log.Warn(fmt.Sprintf("%d incompatibilities were found while checking list of your mods, "+
 				"but %s flag is set, so ignoring this issue", incompatibilities, log.Highlight("--ignore-incompatibilities")))
 		} else {
-			log.Fatal(fmt.Sprintf("%d incompatibilities were found while checking list of your mods. "+
+			return fmt.Errorf("%d incompatibilities were found while checking list of your mods. "+
 				"You should remove incompatible mods or not to install incompatible mods. "+
 				"If you want to install mod anyway and ignore this error, rerun install command with %s flag",
-				incompatibilities, log.Highlight("--ignore-incompatibilities")))
-			return fmt.Errorf("incompatible mods found")
+				incompatibilities, log.Highlight("--ignore-incompatibilities"))
 		}
 	} else {
 		log.Fine("No incompatibilities found")
