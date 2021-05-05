@@ -12,6 +12,10 @@ type Modrinth struct {
 	URL string
 }
 
+func (m Modrinth) GetDisplayName() string {
+	return "Modrinth"
+}
+
 func (m Modrinth) Fetch(endpoint string, dest interface{}) error {
 	response, err := http.Get(m.URL + "/api/v1" + endpoint)
 	if err != nil {
@@ -60,6 +64,10 @@ type ModrinthMod struct {
 	Modrinth     Modrinth `json:"-"`
 }
 
+func (m ModrinthMod) GetRemote() Source {
+	return m.Modrinth
+}
+
 func (m ModrinthMod) GetDescription() string {
 	return m.Description
 }
@@ -105,7 +113,7 @@ func (m ModrinthModVersion) GetFileHash() string {
 }
 
 func (m ModrinthModVersion) GetDownloadURL() string {
-	return m.Files[0].Hashes.SHA512
+	return m.Files[0].URL
 }
 
 type ModrinthFile struct {

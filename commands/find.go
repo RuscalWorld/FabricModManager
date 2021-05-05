@@ -13,7 +13,7 @@ func FindMod(ctx *cli.Context) error {
 		return err
 	}
 
-	mod := (*info).(remote.ModrinthMod)
+	mod := info.(remote.ModrinthMod)
 	log.Fine("Found a mod at modrinth: " + mod.GetName())
 	log.Fine(mod.Description)
 

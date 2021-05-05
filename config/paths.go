@@ -2,19 +2,28 @@ package config
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+
+	"github.com/RuscalWorld/FabricModManager/log"
 )
 
-func GetConfigPath(filename string) string {
+func GetRootDir() string {
 	dir, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal(err)
 	}
-	return path.Join(dir, ".fmm", filename)
+	return path.Join(dir, ".fmm")
+}
+
+func GetConfigPath(filename string) string {
+	return path.Join(GetRootDir(), filename)
+}
+
+func GetCachePath() string {
+	return path.Join(GetRootDir(), "mods")
 }
 
 func IsMinecraftDirectory(path string) bool {
@@ -29,7 +38,7 @@ func IsMinecraftDirectory(path string) bool {
 func GetMinecraftDirectory() string {
 	dir, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatalln(dir)
+		log.Fatal(dir)
 		return ""
 	}
 
@@ -39,7 +48,7 @@ func GetMinecraftDirectory() string {
 	case "linux":
 		return path.Join(dir, ".minecraft")
 	default:
-		log.Fatalln("Unable to determine default directory of your Minecraft for your OS. Please add your .minecraft to", GetConfigPath("watched.txt"))
+		log.Fatal("Unable to determine default directory of your Minecraft for your OS. Please add your .minecraft to", GetConfigPath("watched.txt"))
 		return ""
 	}
 }

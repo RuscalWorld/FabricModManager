@@ -52,6 +52,20 @@ func main() {
 				Action:      commands.FindMod,
 				ArgsUsage:   "[mod name]",
 			},
+			{
+				Name:        "install",
+				Description: "Installs mod with given name",
+				Action:      commands.InstallMod,
+				ArgsUsage:   "[mod name]",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:        "force",
+						Usage:       "Download mod anyway, remove old mod if it exists",
+						Aliases:     []string{"f"},
+						Destination: &config.Global.Force,
+					},
+				},
+			},
 		},
 	}
 
