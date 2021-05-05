@@ -46,6 +46,12 @@ func main() {
 				Description: "Checks your mod list for conflicts and unmet dependencies",
 				Action:      commands.CheckMods,
 			},
+			{
+				Name:        "find",
+				Description: "Finds mod at available data sources",
+				Action:      commands.FindMod,
+				ArgsUsage:   "[mod name]",
+			},
 		},
 	}
 
