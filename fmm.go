@@ -64,6 +64,17 @@ func main() {
 						Aliases:     []string{"f"},
 						Destination: &config.Global.Force,
 					},
+					&cli.BoolFlag{
+						Name:        "ignore-incompatibilities",
+						Usage:       "Forcibly install mod that is incompatible with already installed mods",
+						Aliases:     []string{"i"},
+						Destination: &config.Global.IgnoreIncompatibilities,
+					},
+					&cli.BoolFlag{
+						Name:        "no-dependencies",
+						Usage:       "Do not install dependencies of mod",
+						Destination: &config.Global.NoDependencyChecks,
+					},
 				},
 			},
 		},

@@ -38,8 +38,8 @@ func DownloadMod(name string, mods []core.FabricMod) error {
 
 	jarPath := path.Join(config.GetCachePath(), mod.GetName()+".jar")
 	if _, err = os.Stat(jarPath); err == nil && !config.Global.Force {
-		log.Warn("Destination file already exists. It looks like this mod was downloaded before. " +
-			"If you want to download new mod anyway, run install command with --force flag.")
+		log.Warn(fmt.Sprintf("Destination file already exists. It looks like this mod was downloaded before. "+
+			"If you want to download new mod anyway, run install command with %s flag.", log.Highlight("--force")))
 	} else if os.IsNotExist(err) || config.Global.Force {
 		log.Info("Retrieving mod versions")
 
@@ -104,34 +104,45 @@ func DownloadMod(name string, mods []core.FabricMod) error {
 		}
 
 		if len(breakNames) > 0 {
-			log.Fatal(fmt.Sprintf("%s is incompatible with some mods: %s", log.Danger(installedMod.GetName()), strings.Join(breakNames, ", ")))
+			log.Error(fmt.Sprintf("%s is incompatible with some mods: %s", log.Danger(installedMod.GetName()), strings.Join(breakNames, ", ")))
 			incompatibilities += len(breakNames)
 		}
 	}
 
 	if incompatibilities > 0 {
-		log.Fatal(fmt.Sprintf("%d incompatibilities were found while checking list of your mods. "+
-			"You sould remove incompatible mods or not to install incompatible mods. "+
-			"If you want to install mod anyway and ignore this error, rerun install command with --ignore-incompatibilities flag", incompatibilities))
-		return fmt.Errorf("incompatible mods found")
+		if config.Global.IgnoreIncompatibilities {
+			log.Warn(fmt.Sprintf("%d incompatibilities were found while checking list of your mods, "+
+				"but %s flag is set, so ignoring this issue", incompatibilities, log.Highlight("--ignore-incompatibilities")))
+		} else {
+			log.Fatal(fmt.Sprintf("%d incompatibilities were found while checking list of your mods. "+
+				"You should remove incompatible mods or not to install incompatible mods. "+
+				"If you want to install mod anyway and ignore this error, rerun install command with %s flag",
+				incompatibilities, log.Highlight("--ignore-incompatibilities")))
+			return fmt.Errorf("incompatible mods found")
+		}
 	} else {
 		log.Fine("No incompatibilities found")
 	}
 
-	log.Info(fmt.Sprintf("Checking if any other mods required for %s to work properly", log.Highlight(mod.GetName())))
+	if !config.Global.NoDependencyChecks {
+		log.Info(fmt.Sprintf("Checking if any other mods required for %s to work properly", log.Highlight(mod.GetName())))
+		dependencies := *info.GetMissingDependencies(&mods)
 
-	dependencies := info.GetMissingDependencies(&mods)
-	if len(*dependencies) > 0 {
-		for dependency := range *dependencies {
-			log.Info(fmt.Sprintf("%s requires mod %s, but it is not installed, attempting to install", log.Highlight(mod.GetName()), log.Warning(dependency)))
-			err = DownloadMod(fmt.Sprintf("%s", dependency), mods)
-			if err != nil {
-				return fmt.Errorf("unable to download dependency (%s): %s \n"+
-					"If you want to skip dependency checks and install mod anyway, rerun install command with --no-deps flag", dependency, err)
+		if len(dependencies) > 0 {
+			for dependency, version := range dependencies {
+				log.Info(fmt.Sprintf("%s requires mod %s %s, but it is not installed, attempting to install",
+					log.Highlight(mod.GetName()), log.Warning(dependency), log.Warning(version)))
+
+				err = DownloadMod(fmt.Sprintf("%s", dependency), mods)
+				if err != nil {
+					return fmt.Errorf("unable to download dependency (%s): %s \n"+
+						"If you want to skip dependency checks and install mod anyway, "+
+						"rerun install command with %s flag", dependency, err, log.Highlight("--no-dependencies"))
+				}
 			}
+		} else {
+			log.Fine(fmt.Sprintf("%s has no unmet dependencies", log.Highlight(mod.GetName())))
 		}
-	} else {
-		log.Fine(fmt.Sprintf("%s has no unmet dependencies", log.Highlight(mod.GetName())))
 	}
 
 	srcFile, err := os.Open(jarPath)
@@ -151,7 +162,7 @@ func DownloadMod(name string, mods []core.FabricMod) error {
 		return fmt.Errorf("unable to copy cached file to the game directory: %s", err)
 	}
 
-	log.Fine(fmt.Sprintf("Successfully installed mod %s", info.GetName()))
+	log.Fine(fmt.Sprintf("Successfully installed mod %s", log.Highlight(info.GetName())))
 
 	return nil
 }
