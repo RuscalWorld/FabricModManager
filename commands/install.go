@@ -18,12 +18,12 @@ import (
 )
 
 func InstallMod(ctx *cli.Context) error {
-	mods, err := core.GetAllMods()
-	if err != nil {
-		return fmt.Errorf("unable to retrieve list of installed mods: %s", err)
-	}
-
 	for _, name := range ctx.Args().Slice() {
+		mods, err := core.GetAllMods()
+		if err != nil {
+			return fmt.Errorf("unable to retrieve list of installed mods: %s", err)
+		}
+
 		log.Info(fmt.Sprintf("Searching mod %s", log.Highlight(name)))
 		err = DownloadMod(name, *mods)
 		if err != nil {
